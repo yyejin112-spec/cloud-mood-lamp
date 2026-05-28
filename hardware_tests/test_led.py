@@ -2,15 +2,14 @@ from rpi_ws281x import PixelStrip, Color
 import time
 
 # =========================
-# Cloud Mood Lamp
-# Smooth Rainbow LED Test
+# Smooth Rainbow Keep-On Test
 # =========================
 
-LED_COUNT = 60        # LED 개수
-LED_PIN = 10          # GPIO10, 물리 핀 19
+LED_COUNT = 60
+LED_PIN = 10          # GPIO10 = 물리 핀 19
 LED_FREQ_HZ = 800000
 LED_DMA = 10
-LED_BRIGHTNESS = 35   # 0~255, 처음엔 낮게. 너무 밝으면 20~40 추천
+LED_BRIGHTNESS = 35   # 너무 밝으면 20~40 추천
 LED_INVERT = False
 LED_CHANNEL = 0
 
@@ -28,9 +27,9 @@ strip.begin()
 
 
 def wheel(pos):
-    """
-    0~255 숫자를 무지개 색으로 바꿔주는 함수
-    """
+    """0~255 값을 무지개 색으로 변환"""
+    pos = pos % 256
+
     if pos < 85:
         return Color(255 - pos * 3, pos * 3, 0)
     elif pos < 170:
@@ -41,36 +40,25 @@ def wheel(pos):
         return Color(pos * 3, 0, 255 - pos * 3)
 
 
-def rainbow_cycle(wait=0.03):
-    """
-    LED 전체가 무지개빛으로 부드럽게 흐르는 효과
-    wait 값이 작을수록 빠르게 움직임
-    """
-    for j in range(256):
-        for i in range(LED_COUNT):
-            color_index = (i * 256 // LED_COUNT + j) & 255
-            strip.setPixelColor(i, wheel(color_index))
-        strip.show()
-        time.sleep(wait)
-
-
-def clear_leds():
-    """
-    모든 LED 끄기
-    """
+def rainbow_step(offset):
+    """현재 offset 값에 맞춰 LED 전체를 무지개색으로 세팅"""
     for i in range(LED_COUNT):
-        strip.setPixelColor(i, Color(0, 0, 0))
+        color_index = (i * 256 // LED_COUNT + offset) % 256
+        strip.setPixelColor(i, wheel(color_index))
     strip.show()
 
 
 try:
-    print("Smooth rainbow LED test start")
+    print("Rainbow LED keep-on test start")
     print("Press Ctrl + C to stop")
 
+    offset = 0
+
     while True:
-        rainbow_cycle(wait=0.03)
+        rainbow_step(offset)
+        offset = (offset + 1) % 256
+        time.sleep(0.05)  # 숫자가 클수록 천천히 움직임
 
 except KeyboardInterrupt:
-    print("Stopping LED test...")
-    clear_leds()
-    print("LED off")
+    print("Stopped by user")
+    print("LED is left on with the last rainbow color")
