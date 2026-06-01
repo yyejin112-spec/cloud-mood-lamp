@@ -75,6 +75,22 @@ def set_all_scaled(r, g, b, percent):
     set_all_rgb(sr, sg, sb)
 
 
+def rainbow_rgb(pos):
+    """
+    0~255 값을 무지개 RGB 값으로 변환.
+    """
+    pos = pos % 256
+
+    if pos < 85:
+        return 255 - pos * 3, pos * 3, 0
+    elif pos < 170:
+        pos -= 85
+        return 0, 255 - pos * 3, pos * 3
+    else:
+        pos -= 170
+        return pos * 3, 0, 255 - pos * 3
+
+
 # =========================
 # Vibration functions
 # =========================
@@ -125,6 +141,20 @@ def vib_prickly():
         time.sleep(0.09)
 
 
+def vib_crazy():
+    """
+    미침:
+    불규칙하고 정신없는 진동.
+    """
+    start = time.time()
+
+    while time.time() - start < 5:
+        strength = random.randint(20, 90)
+        duration = random.uniform(0.03, 0.18)
+        vibrate(strength, duration)
+        time.sleep(random.uniform(0.02, 0.16))
+
+
 def run_together(led_function, vibration_function):
     led_thread = threading.Thread(target=led_function)
     vib_thread = threading.Thread(target=vibration_function)
@@ -145,24 +175,29 @@ def run_together(led_function, vibration_function):
 def led_happy():
     """
     행복:
-    살짝 주황빛이 도는 노란색.
-    따뜻한 햇빛처럼 부드럽게 출렁이고, 작은 반짝임이 섞임.
+    색은 살짝 주황빛이 도는 노란색 유지.
+    효과는 기존 불안처럼 일정하지 않게 반짝이고 튀는 느낌.
     """
-    base = (255, 180, 20)
+    start = time.time()
 
-    for step in range(120):
-        wave = (math.sin(step * 0.12) + 1) / 2
-        percent = 35 + wave * 55
-        r, g, b = scaled_rgb(*base, percent)
+    while time.time() - start < 4.5:
+        # 기본은 주황빛 노란색
+        base_brightness = random.randint(25, 75)
+        r, g, b = scaled_rgb(255, 180, 20, base_brightness)
         set_all_rgb(r, g, b)
 
-        # 작은 햇살 같은 반짝임
-        for _ in range(3):
+        # 일부 LED가 따뜻하게 톡톡 튐
+        for _ in range(random.randint(3, 10)):
             idx = random.randint(0, LED_COUNT - 1)
-            set_pixel_rgb(idx, 255, 220, 80)
+            set_pixel_rgb(idx, 255, random.randint(190, 240), random.randint(20, 80))
 
         strip.show()
-        time.sleep(0.035)
+        time.sleep(random.uniform(0.04, 0.18))
+
+        # 짧게 어두워졌다가 다시 켜지는 반짝임
+        if random.random() < 0.45:
+            set_all_scaled(255, 180, 20, random.randint(8, 25))
+            time.sleep(random.uniform(0.03, 0.12))
 
 
 def led_sad():
@@ -187,28 +222,24 @@ def led_sad():
 def led_anxious():
     """
     불안:
-    살짝 붉은빛이 도는 주황색.
-    일정하지 않게 흔들리고 튀는 느낌.
+    색은 살짝 붉은빛이 도는 주황색 유지.
+    효과는 기존 행복처럼 부드럽게 출렁이고 작은 빛이 반짝임.
     """
-    start = time.time()
+    base = (255, 70, 12)
 
-    while time.time() - start < 4.5:
-        base_brightness = random.randint(20, 65)
-        r, g, b = scaled_rgb(255, 70, 12, base_brightness)
+    for step in range(120):
+        wave = (math.sin(step * 0.12) + 1) / 2
+        percent = 35 + wave * 55
+        r, g, b = scaled_rgb(*base, percent)
         set_all_rgb(r, g, b)
 
-        # 일부 LED가 불규칙하게 튐
-        for _ in range(random.randint(3, 10)):
+        # 붉은 주황색의 작은 반짝임
+        for _ in range(3):
             idx = random.randint(0, LED_COUNT - 1)
-            set_pixel_rgb(idx, 255, random.randint(35, 100), 5)
+            set_pixel_rgb(idx, 255, random.randint(80, 130), random.randint(5, 30))
 
         strip.show()
-        time.sleep(random.uniform(0.04, 0.18))
-
-        # 갑자기 어두워지는 순간
-        if random.random() < 0.5:
-            set_all_scaled(255, 70, 12, random.randint(5, 20))
-            time.sleep(random.uniform(0.03, 0.12))
+        time.sleep(0.035)
 
 
 def led_angry_lightning():
@@ -366,6 +397,76 @@ def led_envy():
         time.sleep(0.04)
 
 
+def led_crazy():
+    """
+    미침:
+    정말 미친 듯이 정신없는 무지개빛 LED 효과.
+    빠른 무지개 회전, 랜덤 픽셀, 전체 번쩍임, 색 섞임이 계속 바뀜.
+    """
+    start = time.time()
+    offset = random.randint(0, 255)
+
+    while time.time() - start < 5:
+        mode = random.choice(["spin", "scramble", "confetti", "strobe", "chaos_wave"])
+
+        if mode == "spin":
+            # 무지개가 빠르게 회전
+            for _ in range(random.randint(5, 14)):
+                for i in range(LED_COUNT):
+                    r, g, b = rainbow_rgb((i * 256 // LED_COUNT + offset) % 256)
+                    set_pixel_rgb(i, r, g, b)
+
+                strip.show()
+                offset = (offset + random.randint(8, 28)) % 256
+                time.sleep(random.uniform(0.008, 0.025))
+
+        elif mode == "scramble":
+            # 모든 LED가 제각각 다른 무지개색으로 뒤죽박죽
+            for i in range(LED_COUNT):
+                r, g, b = rainbow_rgb(random.randint(0, 255))
+                set_pixel_rgb(i, r, g, b)
+
+            strip.show()
+            time.sleep(random.uniform(0.02, 0.08))
+
+        elif mode == "confetti":
+            # 어두운 배경 위에 랜덤 무지개 점들이 폭발
+            clear_leds()
+
+            for _ in range(random.randint(10, 35)):
+                idx = random.randint(0, LED_COUNT - 1)
+                r, g, b = rainbow_rgb(random.randint(0, 255))
+                set_pixel_rgb(idx, r, g, b)
+
+            strip.show()
+            time.sleep(random.uniform(0.02, 0.1))
+
+        elif mode == "strobe":
+            # 전체가 무지개색 중 하나로 번쩍
+            r, g, b = rainbow_rgb(random.randint(0, 255))
+            set_all_rgb(r, g, b)
+            time.sleep(random.uniform(0.015, 0.06))
+
+            if random.random() < 0.7:
+                clear_leds()
+                time.sleep(random.uniform(0.01, 0.05))
+
+        elif mode == "chaos_wave":
+            # 규칙적일 듯하다가 흔들리는 이상한 파동
+            for step in range(random.randint(8, 20)):
+                for i in range(LED_COUNT):
+                    weird = int(
+                        128
+                        + 127 * math.sin(i * random.uniform(0.1, 0.4) + step * random.uniform(0.4, 1.2))
+                    )
+                    r, g, b = rainbow_rgb((weird + offset + random.randint(0, 40)) % 256)
+                    set_pixel_rgb(i, r, g, b)
+
+                strip.show()
+                offset = (offset + random.randint(5, 20)) % 256
+                time.sleep(random.uniform(0.01, 0.04))
+
+
 # =========================
 # Emotion Effects
 # =========================
@@ -450,6 +551,16 @@ def effect_envy():
     run_together(led_part, vib_part)
 
 
+def effect_crazy():
+    def led_part():
+        led_crazy()
+
+    def vib_part():
+        vib_crazy()
+
+    run_together(led_part, vib_part)
+
+
 # =========================
 # Menu
 # =========================
@@ -459,14 +570,15 @@ def show_menu():
     print("=================================")
     print("Cloud Mood Lamp Emotion Test")
     print("---------------------------------")
-    print("행복 / happy      : 주황빛 노란색, 따뜻한 반짝임")
+    print("행복 / happy      : 주황빛 노란색, 불규칙한 반짝임")
     print("슬픔 / sad        : 파란색, 천천히 가라앉는 파동")
-    print("불안 / anxious    : 붉은 주황색, 불규칙한 흔들림")
+    print("불안 / anxious    : 붉은 주황색, 부드러운 반짝임")
     print("화남 / angry      : 흰색 천둥번개 효과")
     print("부끄러움 / shy    : 핑크, 천천히 붉어짐")
     print("따분함 / bored    : 보라색, 느린 맥박")
     print("까칠함 / prickly  : 완전 초록, 날카로운 스파이크")
     print("부러움 / envy     : 청록, 흐르는 파동")
+    print("미침 / crazy      : 정신없는 무지개 효과")
     print("---------------------------------")
     print("off               : LED와 진동 끄기")
     print("quit              : 종료")
@@ -507,6 +619,9 @@ try:
         elif emotion in ["부러움", "envy"]:
             effect_envy()
 
+        elif emotion in ["미침", "crazy", "mad"]:
+            effect_crazy()
+
         elif emotion == "off":
             clear_leds()
             stop_vibration()
@@ -519,8 +634,8 @@ try:
         else:
             print("Unknown emotion.")
             print("아래 중 하나를 입력하세요:")
-            print("행복, 슬픔, 불안, 화남, 부끄러움, 따분함, 까칠함, 부러움")
-            print("또는 happy, sad, anxious, angry, shy, bored, prickly, envy")
+            print("행복, 슬픔, 불안, 화남, 부끄러움, 따분함, 까칠함, 부러움, 미침")
+            print("또는 happy, sad, anxious, angry, shy, bored, prickly, envy, crazy")
 
 except KeyboardInterrupt:
     print("\nStopped by user.")
