@@ -40,13 +40,13 @@ MIN_RECORD_SECONDS = 0.6        # 너무 짧은 소리는 무시
 MAX_RECORD_SECONDS = 7.0        # 한 문장 최대 녹음 길이
 SILENCE_SECONDS = 0.75          # 이 시간만큼 조용하면 말이 끝났다고 판단
 PRE_ROLL_CHUNKS = 8             # 말 시작 직전 소리도 조금 포함
-START_CHUNKS_REQUIRED = 3       # 소리가 연속으로 몇 번 커져야 말 시작으로 볼지
+START_CHUNKS_REQUIRED = 1       # 소리가 연속으로 몇 번 커져야 말 시작으로 볼지
 
 # 민감도 기본값
 # 너무 자주 혼자 녹음되면 MIN_START_THRESHOLD를 올려.
 # 말을 해도 녹음이 안 시작되면 MIN_START_THRESHOLD를 내려.
-MIN_START_THRESHOLD = 0.008
-MIN_STOP_THRESHOLD = 0.004
+MIN_START_THRESHOLD = 0.0015
+MIN_STOP_THRESHOLD = 0.0008
 
 # Audio file output
 AUDIO_DIR = PROJECT_ROOT / "state" / "voice_segments"
@@ -832,6 +832,7 @@ def continuous_listen_loop():
 
             level = audio_level(chunk)
             now = time.time()
+            print(f"[Level] {level:.6f}", end="\r")
 
             if not is_recording:
                 pre_roll.append(chunk)
