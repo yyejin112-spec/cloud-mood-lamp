@@ -9,7 +9,7 @@ client = OpenAI()
 
 # 공식 Responses API 예시에서 사용하는 모델 계열.
 # 만약 model not found 에러가 나면 이 줄만 다른 모델명으로 바꾸면 됨.
-MODEL = "gpt-4.1"
+MODEL = "gpt-4o-mini"
 
 ALLOWED_EMOTIONS = [
     "행복",
