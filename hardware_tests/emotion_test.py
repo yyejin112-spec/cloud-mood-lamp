@@ -14,14 +14,14 @@ LED_COUNT = 60
 LED_PIN = 10          # GPIO10 = physical pin 19
 LED_FREQ_HZ = 800000
 LED_DMA = 10
-LED_BRIGHTNESS = 35   # 0~255. 처음에는 낮게 테스트
+LED_BRIGHTNESS = 35   # 0~255. 너무 밝으면 20~40 추천
 LED_INVERT = False
 LED_CHANNEL = 0
 
 # DRV8833 vibration motor settings
 VIB_AIN1 = 23         # GPIO23 = physical pin 16
 VIB_AIN2 = 24         # GPIO24 = physical pin 18
-PWM_FREQ = 100        # vibration PWM frequency
+PWM_FREQ = 100
 
 # LED strip setup
 strip = PixelStrip(
@@ -40,8 +40,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(VIB_AIN1, GPIO.OUT)
 GPIO.setup(VIB_AIN2, GPIO.OUT)
 
-# One direction only:
-# AIN1 = PWM, AIN2 = LOW
+# One direction only
 GPIO.output(VIB_AIN2, GPIO.LOW)
 vib_pwm = GPIO.PWM(VIB_AIN1, PWM_FREQ)
 vib_pwm.start(0)
@@ -65,6 +64,12 @@ def set_all_leds(color):
     strip.show()
 
 
+def make_scaled_color(r, g, b, percent):
+    """Make brightness-scaled Color."""
+    percent = max(0, min(100, percent)) / 100
+    return Color(int(r * percent), int(g * percent), int(b * percent))
+
+
 def stop_vibration():
     """Stop vibration motor."""
     vib_pwm.ChangeDutyCycle(0)
@@ -83,205 +88,8 @@ def vibrate(strength, duration):
     vib_pwm.ChangeDutyCycle(0)
 
 
-# =========================
-# LED effect functions
-# =========================
-
-def breathe_color(color, cycles=3, delay=0.03):
-    """
-    LED softly fades in and out with one color.
-    """
-    for _ in range(cycles):
-        # Fade in
-        for brightness in range(0, 101, 4):
-            for i in range(LED_COUNT):
-                strip.setPixelColor(i, scale_color(color, brightness))
-            strip.show()
-            time.sleep(delay)
-
-        # Fade out
-        for brightness in range(100, -1, -4):
-            for i in range(LED_COUNT):
-                strip.setPixelColor(i, scale_color(color, brightness))
-            strip.show()
-            time.sleep(delay)
-
-
-def blink_color(color, times=5, on_time=0.12, off_time=0.08):
-    """
-    LED quickly blinks.
-    """
-    for _ in range(times):
-        set_all_leds(color)
-        time.sleep(on_time)
-        clear_leds()
-        time.sleep(off_time)
-
-
-def unstable_flicker(color1, color2, duration=3):
-    """
-    Irregular flickering effect for anxious emotion.
-    """
-    start = time.time()
-    while time.time() - start < duration:
-        chosen = color1 if random.random() > 0.5 else color2
-        set_all_leds(chosen)
-        time.sleep(random.uniform(0.05, 0.25))
-        clear_leds()
-        time.sleep(random.uniform(0.03, 0.15))
-
-
-def soft_wave(color, duration=4):
-    """
-    Calm soft glowing effect.
-    """
-    start = time.time()
-    while time.time() - start < duration:
-        breathe_color(color, cycles=1, delay=0.04)
-
-
-def scale_color(color, percent):
-    """
-    Scale Color brightness.
-    percent: 0~100
-    """
-    percent = max(0, min(100, percent)) / 100
-
-    # rpi_ws281x Color object is integer, so extract RGB manually is awkward.
-    # Instead, receive color as tuple through make_color functions below.
-    return color
-
-
-def make_scaled_color(r, g, b, percent):
-    """
-    Make brightness-scaled Color.
-    """
-    percent = max(0, min(100, percent)) / 100
-    return Color(int(r * percent), int(g * percent), int(b * percent))
-
-
-def breathe_rgb(r, g, b, cycles=3, delay=0.03):
-    """
-    Fade in/out with RGB values.
-    """
-    for _ in range(cycles):
-        for brightness in range(0, 101, 4):
-            color = make_scaled_color(r, g, b, brightness)
-            set_all_leds(color)
-            time.sleep(delay)
-
-        for brightness in range(100, -1, -4):
-            color = make_scaled_color(r, g, b, brightness)
-            set_all_leds(color)
-            time.sleep(delay)
-
-
-# =========================
-# Emotion effects
-# =========================
-
-def effect_happy():
-    """
-    Happy:
-    warm yellow/pink light + short tapping vibration
-    """
-    def led_part():
-        # warm yellow → pink feel
-        for _ in range(2):
-            breathe_rgb(255, 180, 40, cycles=1, delay=0.02)
-            breathe_rgb(255, 80, 120, cycles=1, delay=0.02)
-
-    def vib_part():
-        for _ in range(4):
-            vibrate(45, 0.12)
-            time.sleep(0.15)
-
-    run_together(led_part, vib_part)
-
-
-def effect_sad():
-    """
-    Sad:
-    slow blue light + weak slow vibration
-    """
-    def led_part():
-        breathe_rgb(30, 80, 255, cycles=3, delay=0.05)
-
-    def vib_part():
-        for _ in range(3):
-            vibrate(25, 0.35)
-            time.sleep(0.45)
-
-    run_together(led_part, vib_part)
-
-
-def effect_angry():
-    """
-    Angry:
-    red/orange fast blinking + strong short vibration
-    """
-    def led_part():
-        for _ in range(6):
-            set_all_leds(Color(255, 0, 0))
-            time.sleep(0.1)
-            set_all_leds(Color(255, 80, 0))
-            time.sleep(0.08)
-            clear_leds()
-            time.sleep(0.05)
-
-    def vib_part():
-        for _ in range(5):
-            vibrate(80, 0.12)
-            time.sleep(0.08)
-
-    run_together(led_part, vib_part)
-
-
-def effect_anxious():
-    """
-    Anxious:
-    purple/blue irregular flicker + irregular vibration
-    """
-    def led_part():
-        start = time.time()
-        while time.time() - start < 4:
-            if random.random() > 0.5:
-                set_all_leds(Color(120, 0, 255))
-            else:
-                set_all_leds(Color(0, 60, 255))
-            time.sleep(random.uniform(0.05, 0.25))
-            clear_leds()
-            time.sleep(random.uniform(0.03, 0.15))
-
-    def vib_part():
-        start = time.time()
-        while time.time() - start < 4:
-            vibrate(random.randint(20, 60), random.uniform(0.05, 0.2))
-            time.sleep(random.uniform(0.05, 0.3))
-
-    run_together(led_part, vib_part)
-
-
-def effect_calm():
-    """
-    Calm:
-    soft sky blue/warm white glow + almost no vibration
-    """
-    def led_part():
-        breathe_rgb(120, 200, 255, cycles=2, delay=0.06)
-        breathe_rgb(255, 220, 180, cycles=1, delay=0.06)
-
-    def vib_part():
-        # very subtle vibration once
-        vibrate(15, 0.15)
-
-    run_together(led_part, vib_part)
-
-
 def run_together(led_function, vibration_function):
-    """
-    Run LED effect and vibration pattern at the same time.
-    """
+    """Run LED and vibration at the same time."""
     led_thread = threading.Thread(target=led_function)
     vib_thread = threading.Thread(target=vibration_function)
 
@@ -295,22 +103,257 @@ def run_together(led_function, vibration_function):
 
 
 # =========================
-# Main interactive loop
+# LED effect functions
+# =========================
+
+def breathe_rgb(r, g, b, cycles=3, delay=0.04):
+    """
+    One color softly fades in and out.
+    구름 무드등처럼 은은하게 숨 쉬는 효과.
+    """
+    for _ in range(cycles):
+        # Fade in
+        for brightness in range(0, 101, 4):
+            color = make_scaled_color(r, g, b, brightness)
+            set_all_leds(color)
+            time.sleep(delay)
+
+        # Fade out
+        for brightness in range(100, -1, -4):
+            color = make_scaled_color(r, g, b, brightness)
+            set_all_leds(color)
+            time.sleep(delay)
+
+
+def hold_rgb(r, g, b, duration=3):
+    """
+    One color stays on.
+    """
+    set_all_leds(Color(r, g, b))
+    time.sleep(duration)
+
+
+def lightning_effect(duration=4):
+    """
+    Angry effect:
+    random white flashes like lightning.
+    """
+    clear_leds()
+    start = time.time()
+
+    while time.time() - start < duration:
+        # 어두운 상태 유지
+        clear_leds()
+        time.sleep(random.uniform(0.08, 0.35))
+
+        # 무작위 LED 일부만 흰색으로 번쩍
+        flash_count = random.randint(5, 20)
+
+        for _ in range(flash_count):
+            led_index = random.randint(0, LED_COUNT - 1)
+            strip.setPixelColor(led_index, Color(255, 255, 255))
+
+        strip.show()
+        time.sleep(random.uniform(0.03, 0.12))
+
+        # 가끔 전체가 짧게 번쩍
+        if random.random() < 0.35:
+            set_all_leds(Color(255, 255, 255))
+            time.sleep(random.uniform(0.03, 0.08))
+
+        clear_leds()
+
+
+# =========================
+# Vibration patterns
+# =========================
+
+def vib_soft():
+    for _ in range(2):
+        vibrate(25, 0.18)
+        time.sleep(0.25)
+
+
+def vib_tap():
+    for _ in range(4):
+        vibrate(45, 0.12)
+        time.sleep(0.14)
+
+
+def vib_nervous():
+    for _ in range(6):
+        vibrate(random.randint(25, 55), random.uniform(0.05, 0.18))
+        time.sleep(random.uniform(0.06, 0.2))
+
+
+def vib_strong_short():
+    for _ in range(5):
+        vibrate(75, 0.1)
+        time.sleep(0.08)
+
+
+def vib_none():
+    time.sleep(0.5)
+
+
+# =========================
+# Emotion effects
+# =========================
+
+def effect_happy():
+    """
+    행복:
+    살짝 주황빛이 도는 노란색
+    """
+    def led_part():
+        breathe_rgb(255, 180, 25, cycles=3, delay=0.035)
+
+    def vib_part():
+        vib_tap()
+
+    run_together(led_part, vib_part)
+
+
+def effect_sad():
+    """
+    슬픔:
+    파란색
+    """
+    def led_part():
+        breathe_rgb(20, 80, 255, cycles=3, delay=0.055)
+
+    def vib_part():
+        vib_soft()
+
+    run_together(led_part, vib_part)
+
+
+def effect_anxious():
+    """
+    불안:
+    살짝 붉은빛이 도는 주황색
+    """
+    def led_part():
+        breathe_rgb(255, 85, 20, cycles=4, delay=0.035)
+
+    def vib_part():
+        vib_nervous()
+
+    run_together(led_part, vib_part)
+
+
+def effect_angry():
+    """
+    화남:
+    무작위 흰색 번쩍임, 번개 치는 듯한 효과
+    """
+    def led_part():
+        lightning_effect(duration=4)
+
+    def vib_part():
+        vib_strong_short()
+
+    run_together(led_part, vib_part)
+
+
+def effect_shy():
+    """
+    부끄러움:
+    핑크
+    """
+    def led_part():
+        breathe_rgb(255, 70, 150, cycles=3, delay=0.045)
+
+    def vib_part():
+        vib_soft()
+
+    run_together(led_part, vib_part)
+
+
+def effect_bored():
+    """
+    따분함:
+    남색
+    """
+    def led_part():
+        breathe_rgb(10, 20, 120, cycles=3, delay=0.07)
+
+    def vib_part():
+        vib_none()
+
+    run_together(led_part, vib_part)
+
+
+def effect_timid():
+    """
+    소심함:
+    보라
+    """
+    def led_part():
+        breathe_rgb(130, 40, 220, cycles=3, delay=0.055)
+
+    def vib_part():
+        vib_soft()
+
+    run_together(led_part, vib_part)
+
+
+def effect_prickly():
+    """
+    까칠함:
+    초록
+    """
+    def led_part():
+        # 살짝 날카로운 느낌이 나도록 초록색을 짧게 깜빡
+        for _ in range(6):
+            set_all_leds(Color(0, 180, 60))
+            time.sleep(0.18)
+            clear_leds()
+            time.sleep(0.08)
+
+    def vib_part():
+        for _ in range(3):
+            vibrate(50, 0.1)
+            time.sleep(0.18)
+
+    run_together(led_part, vib_part)
+
+
+def effect_envy():
+    """
+    부러움:
+    청록
+    """
+    def led_part():
+        breathe_rgb(0, 200, 180, cycles=3, delay=0.045)
+
+    def vib_part():
+        vib_soft()
+
+    run_together(led_part, vib_part)
+
+
+# =========================
+# Menu
 # =========================
 
 def show_menu():
     print()
     print("=================================")
-    print("Emotion Test")
-    print("Type one emotion and press Enter.")
+    print("Cloud Mood Lamp Emotion Test")
     print("---------------------------------")
-    print("happy   : yellow/pink + tapping vibration")
-    print("sad     : blue + slow weak vibration")
-    print("angry   : red/orange + strong short vibration")
-    print("anxious : purple/blue + irregular vibration")
-    print("calm    : soft sky blue + almost no vibration")
-    print("off     : turn off LED and vibration")
-    print("quit    : exit")
+    print("행복 / happy      : 주황빛 노란색")
+    print("슬픔 / sad        : 파란색")
+    print("불안 / anxious    : 붉은빛 주황색")
+    print("화남 / angry      : 흰색 번개 효과")
+    print("부끄러움 / shy    : 핑크")
+    print("따분함 / bored    : 남색")
+    print("소심함 / timid    : 보라")
+    print("까칠함 / prickly  : 초록")
+    print("부러움 / envy     : 청록")
+    print("---------------------------------")
+    print("off               : LED와 진동 끄기")
+    print("quit              : 종료")
     print("=================================")
 
 
@@ -324,20 +367,32 @@ try:
         show_menu()
         emotion = input("Emotion > ").strip().lower()
 
-        if emotion == "happy":
+        if emotion in ["행복", "happy"]:
             effect_happy()
 
-        elif emotion == "sad":
+        elif emotion in ["슬픔", "sad"]:
             effect_sad()
 
-        elif emotion == "angry":
-            effect_angry()
-
-        elif emotion == "anxious":
+        elif emotion in ["불안", "anxious"]:
             effect_anxious()
 
-        elif emotion == "calm":
-            effect_calm()
+        elif emotion in ["화남", "angry"]:
+            effect_angry()
+
+        elif emotion in ["부끄러움", "shy"]:
+            effect_shy()
+
+        elif emotion in ["따분함", "bored"]:
+            effect_bored()
+
+        elif emotion in ["소심함", "timid"]:
+            effect_timid()
+
+        elif emotion in ["까칠함", "prickly"]:
+            effect_prickly()
+
+        elif emotion in ["부러움", "envy"]:
+            effect_envy()
 
         elif emotion == "off":
             clear_leds()
@@ -350,7 +405,9 @@ try:
 
         else:
             print("Unknown emotion.")
-            print("Please type: happy, sad, angry, anxious, calm, off, quit")
+            print("아래 중 하나를 입력하세요:")
+            print("행복, 슬픔, 불안, 화남, 부끄러움, 따분함, 소심함, 까칠함, 부러움")
+            print("또는 happy, sad, anxious, angry, shy, bored, timid, prickly, envy")
 
 except KeyboardInterrupt:
     print("\nStopped by user.")
