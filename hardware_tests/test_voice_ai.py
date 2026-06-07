@@ -8,7 +8,7 @@ sys.path.append(str(PROJECT_ROOT))
 from src.speech_to_text import transcribe_audio
 from src.emotion_ai import classify_emotion
 
-AUDIO_DEVICE = "plughw:3"
+AUDIO_DEVICE = "plughw:2,0"
 AUDIO_FILE = PROJECT_ROOT / "state" / "voice_input.wav"
 RECORD_SECONDS = 4
 

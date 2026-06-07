@@ -13,7 +13,7 @@ from src.speech_to_text import transcribe_audio
 # =========================
 
 # 너의 arecord -l 결과에서 card 3으로 잡혔으므로 plughw:3 사용
-AUDIO_DEVICE = "plughw:3"
+AUDIO_DEVICE = "plughw:2,0"
 
 # 녹음 파일 저장 위치
 AUDIO_FILE = PROJECT_ROOT / "state" / "voice_input.wav"

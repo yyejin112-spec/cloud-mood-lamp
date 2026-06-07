@@ -53,7 +53,7 @@ REALTIME_URL = "wss://api.openai.com/v1/realtime?intent=transcription"
 # Microphone settings
 # -------------------------
 
-AUDIO_DEVICE = "plughw:3"
+AUDIO_DEVICE = "plughw:2,0"
 
 # Realtime transcription용 PCM 설정
 MIC_SAMPLE_RATE = 24000

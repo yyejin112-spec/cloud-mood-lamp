@@ -24,7 +24,7 @@ from src.speech_to_text import transcribe_audio
 
 # Microphone / STT settings
 # arecord -l에서 card 3으로 잡혔으므로 plughw:3 사용
-AUDIO_DEVICE = "plughw:3"
+AUDIO_DEVICE = "plughw:2,0"
 AUDIO_FILE = PROJECT_ROOT / "state" / "voice_input.wav"
 RECORD_SECONDS = 4
 

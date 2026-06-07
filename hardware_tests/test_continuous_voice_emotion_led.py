@@ -27,7 +27,7 @@ from src.speech_to_text import transcribe_audio
 # =========================
 
 # Microphone settings
-AUDIO_DEVICE = "plughw:3"       # arecord -l에서 card 3으로 잡힌 상태
+AUDIO_DEVICE = "plughw:2,0"     # arecord -l에서 card 3으로 잡힌 상태
 SAMPLE_RATE = 48000
 CHANNELS = 1
 SAMPLE_WIDTH = 4                # S32_LE = 4 bytes

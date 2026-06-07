@@ -48,7 +48,7 @@ REALTIME_URL = "wss://api.openai.com/v1/realtime?intent=transcription"
 # -------------------------
 
 # arecord -l에서 INMP441이 card 3으로 잡힌 상태 기준
-AUDIO_DEVICE = "plughw:3"
+AUDIO_DEVICE = "plughw:2,0"
 
 # Realtime transcription용 audio/pcm은 24kHz mono PCM 사용
 MIC_SAMPLE_RATE = 24000
