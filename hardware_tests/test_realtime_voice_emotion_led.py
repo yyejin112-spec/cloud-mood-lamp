@@ -34,12 +34,12 @@ from src.emotion_ai import classify_emotion
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-# 중요:
-# transcription session.update를 보내려면 WebSocket 연결 모델도
-# realtime 대화 모델이 아니라 transcription 전용 모델로 맞춰야 함.
+# Realtime transcription 전용 모델
+# 중요: OpenAI-Beta 헤더는 사용하지 않음
 REALTIME_MODEL = "gpt-realtime-whisper"
 TRANSCRIPTION_MODEL = "gpt-realtime-whisper"
 
+# 현재 GA Realtime WebSocket 방식
 REALTIME_URL = f"wss://api.openai.com/v1/realtime?model={REALTIME_MODEL}"
 
 
@@ -58,6 +58,7 @@ CHUNK_FRAMES = 1200           # 24000Hz 기준 약 0.05초
 CHUNK_BYTES = CHUNK_FRAMES * SAMPLE_WIDTH
 
 # 로컬 말 시작/끝 감지값
+# gpt-realtime-whisper는 turn_detection을 생략하고 직접 commit하는 방식을 사용
 CALIBRATE_SECONDS = 1.2
 MIN_SPEECH_SECONDS = 0.45
 MAX_SPEECH_SECONDS = 8.0
@@ -853,8 +854,6 @@ def calibrate_noise(proc):
 
     noise = sum(levels) / max(1, len(levels))
 
-    # 이전에 기준값이 너무 높게 잡혔으므로
-    # 보수적 배수 대신 noise + 작은 여유값 방식 사용
     start_threshold = max(noise * 1.25, noise + 0.004, MIN_START_THRESHOLD)
     stop_threshold = max(noise * 1.10, noise + 0.002, MIN_STOP_THRESHOLD)
 
@@ -872,11 +871,13 @@ def calibrate_noise(proc):
 async def realtime_connect():
     """
     OpenAI Realtime WebSocket 연결.
-    websockets 버전에 따라 headers 인자명이 달라질 수 있어서 둘 다 대응.
+
+    중요:
+    - OpenAI-Beta: realtime=v1 헤더는 넣지 않음.
+    - GA Realtime 방식에서는 Authorization과 Safety Identifier만 사용.
     """
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "OpenAI-Beta": "realtime=v1",
         "OpenAI-Safety-Identifier": "cloud-mood-lamp-prototype",
     }
 
@@ -902,12 +903,12 @@ async def send_session_update(ws):
     """
     Realtime transcription session 설정.
 
-    중요:
-    - session.type은 transcription
-    - transcription model은 gpt-realtime-whisper
-    - delay는 minimal로 설정해서 반응 속도를 우선함
-    - gpt-realtime-whisper에서는 turn_detection을 생략하고,
-      아래 코드에서 로컬 VAD로 직접 commit함
+    공식 문서 기준:
+    - session.type = transcription
+    - audio.input.format.type = audio/pcm
+    - audio.input.format.rate = 24000
+    - audio.input.transcription.model = gpt-realtime-whisper
+    - gpt-realtime-whisper는 turn_detection을 생략하고 직접 commit하는 방식 사용
     """
     session_update = {
         "type": "session.update",
@@ -1024,7 +1025,6 @@ async def microphone_stream_loop(ws):
                     print()
                     print("[Listen] 말소리 감지 → 실시간 전송 시작")
 
-                    # 말 앞부분이 잘리지 않도록 직전 chunk도 같이 보냄
                     for old_chunk in list(pre_roll):
                         await append_audio_chunk(ws, old_chunk)
                         sent_any_audio = True
@@ -1065,7 +1065,6 @@ async def microphone_stream_loop(ws):
                     sent_any_audio = False
                     pre_roll.clear()
 
-                    # 너무 연속해서 commit되지 않도록 아주 짧게 대기
                     await asyncio.sleep(0.1)
 
     finally:
@@ -1105,6 +1104,21 @@ async def receive_events_loop(ws):
             print()
             print("[Realtime Error]")
             print(json.dumps(event, ensure_ascii=False, indent=2))
+
+            error = event.get("error", {})
+            message_text = error.get("message", "")
+            code = error.get("code", "")
+
+            if "beta_api_shape_disabled" in message_text or "beta_api_shape_disabled" in code:
+                print()
+                print("이 에러가 계속 뜨면 코드 어딘가에 OpenAI-Beta 헤더가 남아있는지 확인하세요.")
+                print("현재 코드에는 OpenAI-Beta 헤더가 없어야 합니다.")
+
+            if "transcription session update" in message_text:
+                print()
+                print("이 에러가 뜨면 REALTIME_URL이 transcription 세션을 열지 못한 것입니다.")
+                print("다음 줄을 코드에서 시도해보세요:")
+                print('REALTIME_URL = "wss://api.openai.com/v1/realtime?intent=transcription"')
 
         elif event_type == "conversation.item.input_audio_transcription.delta":
             delta = event.get("delta", "")
