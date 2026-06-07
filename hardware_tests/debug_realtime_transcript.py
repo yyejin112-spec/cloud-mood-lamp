@@ -12,20 +12,28 @@ from collections import deque
 
 import websockets
 
+# 프로젝트 루트 경로를 Python이 찾을 수 있게 추가
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
+
+from src.emotion_ai import classify_emotion
+
 
 # =========================
 # Cloud Mood Lamp
-# Realtime STT Debug Tool
+# Realtime STT + Emotion Mapping Debug Tool
 # =========================
 #
 # 목적:
 # 1. 마이크 입력 레벨 확인
 # 2. 말소리 감지 확인
 # 3. Realtime API로 오디오가 전송되는지 확인
-# 4. 실시간 transcript delta / completed transcript 확인
+# 4. 실시간 transcript delta 확인
+# 5. completed transcript 확인
+# 6. completed transcript가 어떤 감정으로 매핑되는지 확인
 #
 # LED / 진동은 일부러 사용하지 않음.
-# 먼저 Realtime STT만 확실히 성공시키기 위한 파일.
+# 먼저 Realtime STT + 감정 판단만 확실히 확인하기 위한 파일.
 # =========================
 
 
@@ -37,7 +45,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 TRANSCRIPTION_MODEL = "gpt-realtime-whisper"
 
-# 네 계정에서는 이 방식으로 연결되는 상태였음
+# 네 계정에서는 intent=transcription 방식으로 실행되는 상태
 REALTIME_URL = "wss://api.openai.com/v1/realtime?intent=transcription"
 
 
@@ -55,7 +63,6 @@ CHUNK_FRAMES = 1200           # 24000Hz 기준 약 0.05초
 CHUNK_BYTES = CHUNK_FRAMES * SAMPLE_WIDTH
 
 # 디버그 wav 저장 폴더
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEBUG_AUDIO_DIR = PROJECT_ROOT / "state" / "debug_realtime"
 DEBUG_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -71,7 +78,7 @@ SILENCE_SECONDS = 0.65
 PRE_ROLL_CHUNKS = 8
 START_CHUNKS_REQUIRED = 1
 
-# 주변 소음이 높으면 이 값보다 자동 기준값이 높아짐
+# 주변 소음이 높으면 자동 기준값이 이 값보다 높아짐
 MIN_START_THRESHOLD = 0.006
 MIN_STOP_THRESHOLD = 0.003
 
@@ -81,7 +88,7 @@ PRINT_RAW_EVENTS = True
 PRINT_LEVEL_BAR = True
 
 # 처음 실행하자마자 강제로 몇 초 동안 전송하는 테스트
-# 이 단계에서 말하면 Realtime API 자체가 되는지 바로 확인 가능
+# 이 단계에서 말하면 VAD와 상관없이 Realtime API 자체가 되는지 확인 가능
 FORCE_SEND_TEST_SECONDS = 6
 
 
@@ -217,6 +224,36 @@ def calibrate_noise(proc):
     return start_threshold, stop_threshold
 
 
+async def classify_and_print_emotion(transcript):
+    """
+    완성된 transcript를 감정으로 매핑하고 터미널에 출력.
+    """
+    if not transcript or len(transcript.strip()) < 2:
+        print("[Emotion] transcript가 너무 짧아서 감정 판단을 건너뜁니다.")
+        return
+
+    print()
+    print("[Emotion] 감정 판단 중...")
+
+    try:
+        emotion = await asyncio.to_thread(classify_emotion, transcript)
+
+        print()
+        print("=================================")
+        print("[감정 매핑 결과]")
+        print(f"문장: {transcript}")
+        print(f"감정: {emotion}")
+        print("=================================")
+
+    except Exception as e:
+        print()
+        print("=================================")
+        print("[Emotion Error]")
+        print("감정 판단 중 에러가 발생했습니다.")
+        print(e)
+        print("=================================")
+
+
 # =========================
 # Realtime API helpers
 # =========================
@@ -312,6 +349,7 @@ async def clear_audio_buffer(ws):
 async def receive_events_loop(ws):
     """
     Realtime API에서 오는 이벤트를 계속 출력.
+    completed transcript가 오면 감정 매핑까지 확인.
     """
     print("[Receive] Realtime 이벤트 수신 대기 시작")
 
@@ -369,6 +407,8 @@ async def receive_events_loop(ws):
             print("[완성된 문장 Transcript]")
             print(transcript if transcript else "(빈 transcript)")
             print("=================================")
+
+            await classify_and_print_emotion(transcript)
 
         elif event_type == "conversation.item.input_audio_transcription.failed":
             print()
@@ -430,8 +470,8 @@ async def force_send_test(ws, proc):
     print("[Force] Realtime buffer commit 전송")
     await commit_audio_buffer(ws)
 
-    print("[Force] transcript 결과를 기다립니다. 잠시 기다려주세요.")
-    await asyncio.sleep(3)
+    print("[Force] transcript + 감정 매핑 결과를 기다립니다. 잠시 기다려주세요.")
+    await asyncio.sleep(4)
 
 
 # =========================
@@ -447,7 +487,7 @@ async def vad_stream_loop(ws, proc, start_threshold, stop_threshold):
     print("자동 말소리 감지 디버깅 시작")
     print("---------------------------------")
     print("이제 그냥 말해보세요.")
-    print("터미널에 Level 값, 말소리 감지, commit 여부가 표시됩니다.")
+    print("터미널에 Level 값, 말소리 감지, commit 여부, 감정 매핑 결과가 표시됩니다.")
     print("종료하려면 Ctrl + C")
     print("=================================")
 
@@ -579,13 +619,14 @@ async def main_async():
 
     print()
     print("=================================")
-    print("Cloud Mood Lamp Realtime STT Debug")
+    print("Cloud Mood Lamp Realtime STT + Emotion Debug")
     print("---------------------------------")
     print("목적:")
     print("1. 마이크 레벨 확인")
     print("2. Realtime 오디오 전송 확인")
     print("3. 실시간 transcript 확인")
     print("4. completed transcript 확인")
+    print("5. transcript → 감정 매핑 확인")
     print("---------------------------------")
     print("종료: Ctrl + C")
     print("=================================")
