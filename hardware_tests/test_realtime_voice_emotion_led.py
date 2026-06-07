@@ -40,7 +40,7 @@ REALTIME_MODEL = "gpt-realtime-whisper"
 TRANSCRIPTION_MODEL = "gpt-realtime-whisper"
 
 # 현재 GA Realtime WebSocket 방식
-REALTIME_URL = f"wss://api.openai.com/v1/realtime?model={REALTIME_MODEL}"
+REALTIME_URL = "wss://api.openai.com/v1/realtime?intent=transcription"
 
 
 # -------------------------
