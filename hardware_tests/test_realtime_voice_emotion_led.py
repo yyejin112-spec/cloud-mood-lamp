@@ -34,11 +34,10 @@ from src.emotion_ai import classify_emotion
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-# WebSocket 연결용 Realtime 모델
-# 만약 model not found가 뜨면 "gpt-realtime-1.5" 또는 네 계정에서 가능한 Realtime 모델로 바꿔.
-REALTIME_MODEL = "gpt-realtime-2"
-
-# 실시간 전사용 모델
+# 중요:
+# transcription session.update를 보내려면 WebSocket 연결 모델도
+# realtime 대화 모델이 아니라 transcription 전용 모델로 맞춰야 함.
+REALTIME_MODEL = "gpt-realtime-whisper"
 TRANSCRIPTION_MODEL = "gpt-realtime-whisper"
 
 REALTIME_URL = f"wss://api.openai.com/v1/realtime?model={REALTIME_MODEL}"
@@ -48,18 +47,17 @@ REALTIME_URL = f"wss://api.openai.com/v1/realtime?model={REALTIME_MODEL}"
 # Microphone settings
 # -------------------------
 
-# 네 INMP441이 arecord -l에서 card 3으로 잡혔던 상태 기준
+# arecord -l에서 INMP441이 card 3으로 잡힌 상태 기준
 AUDIO_DEVICE = "plughw:3"
 
-# Realtime transcription 문서 기준으로 audio/pcm은 24kHz mono PCM 사용
+# Realtime transcription용 audio/pcm은 24kHz mono PCM 사용
 MIC_SAMPLE_RATE = 24000
 MIC_CHANNELS = 1
 SAMPLE_WIDTH = 2              # S16_LE = 2 bytes
-CHUNK_FRAMES = 1200           # 24000Hz 기준 0.05초
+CHUNK_FRAMES = 1200           # 24000Hz 기준 약 0.05초
 CHUNK_BYTES = CHUNK_FRAMES * SAMPLE_WIDTH
 
 # 로컬 말 시작/끝 감지값
-# 마이크 환경에 따라 아래 값은 조정 가능
 CALIBRATE_SECONDS = 1.2
 MIN_SPEECH_SECONDS = 0.45
 MAX_SPEECH_SECONDS = 8.0
@@ -71,7 +69,6 @@ START_CHUNKS_REQUIRED = 1
 MIN_START_THRESHOLD = 0.010
 MIN_STOP_THRESHOLD = 0.006
 
-# 말소리 레벨을 터미널에 표시할지 여부
 DEBUG_LEVEL = True
 LEVEL_PRINT_INTERVAL = 0.25
 
@@ -675,7 +672,7 @@ class EffectController:
     """
 
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         self.idle_stop_event = threading.Event()
         self.idle_thread = None
@@ -856,7 +853,7 @@ def calibrate_noise(proc):
 
     noise = sum(levels) / max(1, len(levels))
 
-    # 이전에 네 환경에서 기준값이 너무 높게 잡혔으므로
+    # 이전에 기준값이 너무 높게 잡혔으므로
     # 보수적 배수 대신 noise + 작은 여유값 방식 사용
     start_threshold = max(noise * 1.25, noise + 0.004, MIN_START_THRESHOLD)
     stop_threshold = max(noise * 1.10, noise + 0.002, MIN_STOP_THRESHOLD)
@@ -868,12 +865,18 @@ def calibrate_noise(proc):
     return start_threshold, stop_threshold
 
 
+# =========================
+# Realtime API helpers
+# =========================
+
 async def realtime_connect():
     """
+    OpenAI Realtime WebSocket 연결.
     websockets 버전에 따라 headers 인자명이 달라질 수 있어서 둘 다 대응.
     """
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "OpenAI-Beta": "realtime=v1",
         "OpenAI-Safety-Identifier": "cloud-mood-lamp-prototype",
     }
 
@@ -898,6 +901,13 @@ async def realtime_connect():
 async def send_session_update(ws):
     """
     Realtime transcription session 설정.
+
+    중요:
+    - session.type은 transcription
+    - transcription model은 gpt-realtime-whisper
+    - delay는 minimal로 설정해서 반응 속도를 우선함
+    - gpt-realtime-whisper에서는 turn_detection을 생략하고,
+      아래 코드에서 로컬 VAD로 직접 commit함
     """
     session_update = {
         "type": "session.update",
@@ -912,7 +922,7 @@ async def send_session_update(ws):
                     "transcription": {
                         "model": TRANSCRIPTION_MODEL,
                         "language": "ko",
-                        "delay": "low"
+                        "delay": "minimal"
                     }
                 }
             }
@@ -1137,7 +1147,6 @@ async def receive_events_loop(ws):
             "input_audio_buffer.speech_started",
             "input_audio_buffer.speech_stopped",
         ]:
-            # 현재 코드는 로컬 VAD로 commit하므로 이 이벤트가 안 나올 수도 있음
             print(f"[Realtime] {event_type}")
 
 
