@@ -4,26 +4,26 @@ import time
 # =========================
 # Cloud Mood Lamp
 # Servo Drop Test
-# 45도 → 90도 → 바로 45도 복귀
+# 90도 → 100도 → 바로 90도 복귀
 # =========================
 
-# 물리 핀 12번 = BCM GPIO18
-SERVO_PIN = 17  # GPIO17 = 물리 핀 11번
+# 물리 핀 11번 = BCM GPIO17
+SERVO_PIN = 17
 
 # 드롭 동작 각도
-READY_ANGLE = 45
-DROP_ANGLE = 90
+READY_ANGLE = 90
+DROP_ANGLE = 100
 
-# 서보가 해당 각도로 실제 움직일 시간을 줘야 함
-# 너무 짧으면 90도까지 못 가고 구슬이 안 떨어질 수 있음
-MOVE_TO_DROP_TIME = 0.25
+# 서보가 100도까지 실제로 움직일 시간
+# 너무 짧으면 100도까지 못 가고, 너무 길면 구슬이 2개 떨어질 수 있음
+MOVE_TO_DROP_TIME = 0.15
 
-# 90도에서 따로 멈춰있는 시간
-# "딜레이 없이 바로 복귀"라서 0으로 둠
+# 100도에서 따로 멈춰있는 시간
+# 딜레이 없이 바로 복귀할 거라 0
 HOLD_AT_DROP_TIME = 0.0
 
-# 45도로 돌아오는 시간
-RETURN_TIME = 0.35
+# 90도로 돌아오는 시간
+RETURN_TIME = 0.18
 
 
 GPIO.setmode(GPIO.BCM)
@@ -60,26 +60,26 @@ def set_angle(angle, move_time):
 def drop_one_bead():
     """
     구슬 1개 드롭 명령:
-    45도 → 90도 → 바로 45도 복귀
+    90도 → 100도 → 바로 90도 복귀
     """
     print()
     print("=================================")
     print("구슬 1개 드롭 동작 시작")
     print("---------------------------------")
-    print("45도 → 90도 → 바로 45도 복귀")
+    print("90도 → 100도 → 바로 90도 복귀")
     print("=================================")
 
-    # 1. 기본 대기 위치 45도
+    # 1. 기본 대기 위치 90도
     set_angle(READY_ANGLE, 0.25)
 
-    # 2. 구슬을 떨어뜨리는 위치 90도
+    # 2. 구슬을 살짝 떨어뜨리는 위치 100도
     set_angle(DROP_ANGLE, MOVE_TO_DROP_TIME)
 
-    # 3. 90도에서 기다리지 않고 바로 복귀
+    # 3. 100도에서 기다리지 않고 바로 복귀
     if HOLD_AT_DROP_TIME > 0:
         time.sleep(HOLD_AT_DROP_TIME)
 
-    # 4. 다시 45도로 복귀
+    # 4. 다시 90도로 복귀
     set_angle(READY_ANGLE, RETURN_TIME)
 
     print("구슬 1개 드롭 동작 완료")
@@ -87,12 +87,13 @@ def drop_one_bead():
 
 try:
     print("Servo Drop Test")
-    print("Enter를 누르면 45도 → 90도 → 45도 동작을 실행합니다.")
+    print("서보 신호선: 물리 핀 11번 / GPIO17")
+    print("Enter를 누르면 90도 → 100도 → 90도 동작을 실행합니다.")
     print("종료하려면 q 입력")
 
-    # 시작할 때 45도 기준 위치로 먼저 이동
+    # 시작할 때 90도 기준 위치로 먼저 이동
     print()
-    print("초기 위치를 45도로 맞춥니다.")
+    print("초기 위치를 90도로 맞춥니다.")
     set_angle(READY_ANGLE, 0.5)
 
     while True:
