@@ -8,7 +8,7 @@ import time
 # =========================
 
 # 물리 핀 12번 = BCM GPIO18
-SERVO_PIN = 18
+SERVO_PIN = 17  # GPIO17 = 물리 핀 11번
 
 # 드롭 동작 각도
 READY_ANGLE = 45
