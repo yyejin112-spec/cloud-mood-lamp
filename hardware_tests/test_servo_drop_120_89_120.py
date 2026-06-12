@@ -4,25 +4,25 @@ import time
 # =========================
 # Cloud Mood Lamp
 # Servo Drop Test
-# 90도 → 100도 → 바로 90도 복귀
+# 120도 → 89도 → 바로 120도 복귀
 # =========================
 
 # 물리 핀 11번 = BCM GPIO17
 SERVO_PIN = 17
 
 # 드롭 동작 각도
-READY_ANGLE = 90
-DROP_ANGLE = 100
+READY_ANGLE = 120
+DROP_ANGLE = 89
 
-# 서보가 100도까지 실제로 움직일 시간
-# 너무 짧으면 100도까지 못 가고, 너무 길면 구슬이 2개 떨어질 수 있음
+# 서보가 89도까지 실제로 움직일 시간
+# 너무 짧으면 89도까지 못 가고, 너무 길면 구슬이 2개 떨어질 수 있음
 MOVE_TO_DROP_TIME = 0.15
 
-# 100도에서 따로 멈춰있는 시간
+# 89도에서 따로 멈춰있는 시간
 # 딜레이 없이 바로 복귀할 거라 0
 HOLD_AT_DROP_TIME = 0.0
 
-# 90도로 돌아오는 시간
+# 120도로 돌아오는 시간
 RETURN_TIME = 0.18
 
 
@@ -60,26 +60,26 @@ def set_angle(angle, move_time):
 def drop_one_bead():
     """
     구슬 1개 드롭 명령:
-    90도 → 100도 → 바로 90도 복귀
+    120도 → 89도 → 바로 120도 복귀
     """
     print()
     print("=================================")
     print("구슬 1개 드롭 동작 시작")
     print("---------------------------------")
-    print("90도 → 100도 → 바로 90도 복귀")
+    print("120도 → 89도 → 바로 120도 복귀")
     print("=================================")
 
-    # 1. 기본 대기 위치 90도
+    # 1. 기본 대기 위치 120도
     set_angle(READY_ANGLE, 0.25)
 
-    # 2. 구슬을 살짝 떨어뜨리는 위치 100도
+    # 2. 구슬을 떨어뜨리는 위치 89도
     set_angle(DROP_ANGLE, MOVE_TO_DROP_TIME)
 
-    # 3. 100도에서 기다리지 않고 바로 복귀
+    # 3. 89도에서 기다리지 않고 바로 복귀
     if HOLD_AT_DROP_TIME > 0:
         time.sleep(HOLD_AT_DROP_TIME)
 
-    # 4. 다시 90도로 복귀
+    # 4. 다시 120도로 복귀
     set_angle(READY_ANGLE, RETURN_TIME)
 
     print("구슬 1개 드롭 동작 완료")
@@ -88,12 +88,12 @@ def drop_one_bead():
 try:
     print("Servo Drop Test")
     print("서보 신호선: 물리 핀 11번 / GPIO17")
-    print("Enter를 누르면 90도 → 100도 → 90도 동작을 실행합니다.")
+    print("Enter를 누르면 120도 → 89도 → 120도 동작을 실행합니다.")
     print("종료하려면 q 입력")
 
-    # 시작할 때 90도 기준 위치로 먼저 이동
+    # 시작할 때 120도 기준 위치로 먼저 이동
     print()
-    print("초기 위치를 90도로 맞춥니다.")
+    print("초기 위치를 120도로 맞춥니다.")
     set_angle(READY_ANGLE, 0.5)
 
     while True:
