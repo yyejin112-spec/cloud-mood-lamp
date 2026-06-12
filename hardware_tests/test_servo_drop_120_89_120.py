@@ -16,14 +16,14 @@ DROP_ANGLE = 89
 
 # 서보가 89도까지 실제로 움직일 시간
 # 너무 짧으면 89도까지 못 가고, 너무 길면 구슬이 2개 떨어질 수 있음
-MOVE_TO_DROP_TIME = 0.15
+MOVE_TO_DROP_TIME = 0.30
 
 # 89도에서 따로 멈춰있는 시간
 # 딜레이 없이 바로 복귀할 거라 0
 HOLD_AT_DROP_TIME = 0.0
 
 # 120도로 돌아오는 시간
-RETURN_TIME = 0.18
+RETURN_TIME = 0.30
 
 
 GPIO.setmode(GPIO.BCM)
