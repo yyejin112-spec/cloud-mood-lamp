@@ -7,7 +7,7 @@ import time
 # =========================
 
 SERVO_PIN = 17
-HOLD_ANGLE = 90
+HOLD_ANGLE = 88
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SERVO_PIN, GPIO.OUT)
