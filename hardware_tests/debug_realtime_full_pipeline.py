@@ -74,7 +74,7 @@ FORCE_SEND_TEST_SECONDS = 6
 # LED settings
 # -------------------------
 
-LED_COUNT = 60
+LED_COUNT = 120
 LED_PIN = 10          # GPIO10 = physical pin 19
 LED_FREQ_HZ = 800000
 LED_DMA = 10
