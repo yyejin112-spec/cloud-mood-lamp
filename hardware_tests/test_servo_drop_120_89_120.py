@@ -20,7 +20,7 @@ MOVE_TO_DROP_TIME = 0.30
 
 # 89도에서 따로 멈춰있는 시간
 # 딜레이 없이 바로 복귀할 거라 0
-HOLD_AT_DROP_TIME = 0.0
+HOLD_AT_DROP_TIME = 1.0
 
 # 120도로 돌아오는 시간
 RETURN_TIME = 0.30
